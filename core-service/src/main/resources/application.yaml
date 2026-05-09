@@ -1,6 +1,19 @@
+server:
+  port: 8081
+
 spring:
   application:
     name: core-service
 
-server:
-  port: 8081
+  datasource:
+    url: jdbc:postgresql://localhost:5432/tenant_platform_db
+    username: postgres
+    password: postgres
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: true
+
+  flyway:
+    enabled: true
