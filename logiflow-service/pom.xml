@@ -3,14 +3,12 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.5.15-SNAPSHOT</version>
-        <relativePath/> <!-- lookup parent from repository -->
+        <groupId>com.tenantcore</groupId>
+        <artifactId>tenant-platform</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+        <relativePath>../pom.xml</relativePath>
     </parent>
-    <groupId>com.tenantcore</groupId>
     <artifactId>logiflow-service</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
     <name>logiflow-service</name>
     <description>logiflow-service</description>
     <url/>
@@ -71,6 +69,11 @@
             <artifactId>spring-security-test</artifactId>
             <scope>test</scope>
         </dependency>
+
+        <dependency>
+            <groupId>com.tenantcore</groupId>
+            <artifactId>common-lib</artifactId>
+        </dependency>
     </dependencies>
 
     <build>
@@ -125,25 +128,4 @@
             </plugin>
         </plugins>
     </build>
-    <repositories>
-        <repository>
-            <id>spring-snapshots</id>
-            <name>Spring Snapshots</name>
-            <url>https://repo.spring.io/snapshot</url>
-            <releases>
-                <enabled>false</enabled>
-            </releases>
-        </repository>
-    </repositories>
-    <pluginRepositories>
-        <pluginRepository>
-            <id>spring-snapshots</id>
-            <name>Spring Snapshots</name>
-            <url>https://repo.spring.io/snapshot</url>
-            <releases>
-                <enabled>false</enabled>
-            </releases>
-        </pluginRepository>
-    </pluginRepositories>
-
 </project>
