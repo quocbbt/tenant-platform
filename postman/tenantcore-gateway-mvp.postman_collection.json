@@ -1,0 +1,242 @@
+{
+  "info": {
+    "_postman_id": "8dcb1ff6-9844-4916-8ee2-63b14ef7bfc1",
+    "name": "TenantCore Gateway MVP",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Health - Core",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/core/health"
+      }
+    },
+    {
+      "name": "Health - Logiflow",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/logiflow/health"
+      }
+    },
+    {
+      "name": "Auth - Setup Password",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "X-Tenant-Code", "value": "{{tenantCode}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"username\": \"demo.owner\",\n  \"password\": \"Demo@123\"\n}"
+        },
+        "url": "{{baseUrl}}/api/auth/setup-password"
+      }
+    },
+    {
+      "name": "Auth - Login",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const json = pm.response.json();",
+              "pm.collectionVariables.set('accessToken', json.data.accessToken);",
+              "pm.collectionVariables.set('refreshToken', json.data.refreshToken);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "X-Tenant-Code", "value": "{{tenantCode}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"username\": \"demo.owner\",\n  \"password\": \"Demo@123\"\n}"
+        },
+        "url": "{{baseUrl}}/api/auth/login"
+      }
+    },
+    {
+      "name": "Auth - Me",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "X-Tenant-Code", "value": "{{tenantCode}}" },
+          { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+        ],
+        "url": "{{baseUrl}}/api/auth/me"
+      }
+    },
+    {
+      "name": "Auth - Refresh",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const json = pm.response.json();",
+              "pm.collectionVariables.set('accessToken', json.data.accessToken);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "X-Tenant-Code", "value": "{{tenantCode}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+        },
+        "url": "{{baseUrl}}/api/auth/refresh"
+      }
+    },
+    {
+      "name": "Logiflow - Create Order",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const json = pm.response.json();",
+              "pm.collectionVariables.set('orderId', json.data.id);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "X-Tenant-Code", "value": "{{tenantCode}}" },
+          { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"receiverName\": \"Postman Receiver\",\n  \"receiverAddress\": \"Ho Chi Minh City\",\n  \"codAmount\": 120000\n}"
+        },
+        "url": "{{baseUrl}}/api/logiflow/orders"
+      }
+    },
+    {
+      "name": "Logiflow - Get Order",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "X-Tenant-Code", "value": "{{tenantCode}}" },
+          { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+        ],
+        "url": "{{baseUrl}}/api/logiflow/orders/{{orderId}}"
+      }
+    },
+    {
+      "name": "Logiflow - List Orders",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "X-Tenant-Code", "value": "{{tenantCode}}" },
+          { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+        ],
+        "url": "{{baseUrl}}/api/logiflow/orders?page=0&size=10&status=COMPLETED&keyword=Postman"
+      }
+    },
+    {
+      "name": "Logiflow - Update Order Status",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          { "key": "X-Tenant-Code", "value": "{{tenantCode}}" },
+          { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"status\": \"COMPLETED\"\n}"
+        },
+        "url": "{{baseUrl}}/api/logiflow/orders/{{orderId}}/status"
+      }
+    },
+    {
+      "name": "Logiflow - Assign Order",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "X-Tenant-Code", "value": "{{tenantCode}}" },
+          { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"note\": \"assigned by postman\"\n}"
+        },
+        "url": "{{baseUrl}}/api/logiflow/orders/{{orderId}}/assign"
+      }
+    },
+    {
+      "name": "Logiflow - Add Tracking Event",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "X-Tenant-Code", "value": "{{tenantCode}}" },
+          { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"eventCode\": \"IN_TRANSIT\",\n  \"eventName\": \"In transit\",\n  \"locationText\": \"Da Nang\"\n}"
+        },
+        "url": "{{baseUrl}}/api/logiflow/orders/{{orderId}}/tracking"
+      }
+    },
+    {
+      "name": "Logiflow - Update COD",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "X-Tenant-Code", "value": "{{tenantCode}}" },
+          { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"amount\": 120000,\n  \"status\": \"COLLECTED\",\n  \"note\": \"collected by driver\"\n}"
+        },
+        "url": "{{baseUrl}}/api/logiflow/orders/{{orderId}}/cod"
+      }
+    },
+    {
+      "name": "Auth - Logout",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "X-Tenant-Code", "value": "{{tenantCode}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+        },
+        "url": "{{baseUrl}}/api/auth/logout"
+      }
+    }
+  ],
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8080" },
+    { "key": "tenantCode", "value": "demo" },
+    { "key": "accessToken", "value": "" },
+    { "key": "refreshToken", "value": "" },
+    { "key": "orderId", "value": "" }
+  ]
+}

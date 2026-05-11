@@ -8,7 +8,7 @@ spring:
   datasource:
     url: jdbc:postgresql://ep-dry-silence-aoa09kmu.c-2.ap-southeast-1.aws.neon.tech:5432/neondb?sslmode=require
     username: neondb_owner
-    password: ${NEON_DB_PASSWORD}
+    password: npg_zAXFE59iRVCy
     driver-class-name: org.postgresql.Driver
 
     hikari:
@@ -30,3 +30,11 @@ spring:
     enabled: true
     locations: classpath:db/migration
     baseline-on-migrate: true
+
+app:
+  auth:
+    jwt:
+      issuer: tenantcore-core-service
+      secret: ${APP_JWT_SECRET:tenantcore-dev-secret-change-me-tenantcore-dev-secret}
+      access-token-expiration-seconds: 3600
+      refresh-token-expiration-seconds: 604800
