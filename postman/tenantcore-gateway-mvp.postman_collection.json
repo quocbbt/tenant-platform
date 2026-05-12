@@ -217,6 +217,347 @@
       }
     },
     {
+      "name": "Logiflow - Create Customer",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const json = pm.response.json();",
+              "pm.collectionVariables.set('customerId', json.data.id);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "X-Tenant-Code", "value": "{{tenantCode}}" },
+          { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"customerCode\": \"CUS-POSTMAN-001\",\n  \"customerName\": \"Postman Customer\",\n  \"phone\": \"0909000111\",\n  \"email\": \"postman.customer@example.com\",\n  \"address\": \"District 1, Ho Chi Minh City\",\n  \"type\": \"NORMAL\"\n}"
+        },
+        "url": "{{baseUrl}}/api/logiflow/customers"
+      }
+    },
+    {
+      "name": "Logiflow - Get Customer",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "X-Tenant-Code", "value": "{{tenantCode}}" },
+          { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+        ],
+        "url": "{{baseUrl}}/api/logiflow/customers/{{customerId}}"
+      }
+    },
+    {
+      "name": "Logiflow - List Customers",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "X-Tenant-Code", "value": "{{tenantCode}}" },
+          { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+        ],
+        "url": "{{baseUrl}}/api/logiflow/customers?page=0&size=10&status=ACTIVE&keyword=Postman"
+      }
+    },
+    {
+      "name": "Logiflow - Update Customer",
+      "request": {
+        "method": "PUT",
+        "header": [
+          { "key": "X-Tenant-Code", "value": "{{tenantCode}}" },
+          { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"customerName\": \"Postman Customer Updated\",\n  \"phone\": \"0909000222\",\n  \"email\": \"postman.customer.updated@example.com\",\n  \"address\": \"District 7, Ho Chi Minh City\",\n  \"type\": \"VIP\",\n  \"status\": \"ACTIVE\"\n}"
+        },
+        "url": "{{baseUrl}}/api/logiflow/customers/{{customerId}}"
+      }
+    },
+    {
+      "name": "Logiflow - Delete Customer",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          { "key": "X-Tenant-Code", "value": "{{tenantCode}}" },
+          { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+        ],
+        "url": "{{baseUrl}}/api/logiflow/customers/{{customerId}}"
+      }
+    },
+    {
+      "name": "Logiflow - Create Driver",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const json = pm.response.json();",
+              "pm.collectionVariables.set('driverId', json.data.id);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "X-Tenant-Code", "value": "{{tenantCode}}" },
+          { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"driverCode\": \"DRV-POSTMAN-001\",\n  \"fullName\": \"Postman Driver\",\n  \"phone\": \"0908111222\",\n  \"email\": \"postman.driver@example.com\",\n  \"licenseNumber\": \"LIC-POSTMAN-001\"\n}"
+        },
+        "url": "{{baseUrl}}/api/logiflow/drivers"
+      }
+    },
+    {
+      "name": "Logiflow - Get Driver",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "X-Tenant-Code", "value": "{{tenantCode}}" },
+          { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+        ],
+        "url": "{{baseUrl}}/api/logiflow/drivers/{{driverId}}"
+      }
+    },
+    {
+      "name": "Logiflow - List Drivers",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "X-Tenant-Code", "value": "{{tenantCode}}" },
+          { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+        ],
+        "url": "{{baseUrl}}/api/logiflow/drivers?page=0&size=10&status=ACTIVE&keyword=Postman"
+      }
+    },
+    {
+      "name": "Logiflow - Update Driver",
+      "request": {
+        "method": "PUT",
+        "header": [
+          { "key": "X-Tenant-Code", "value": "{{tenantCode}}" },
+          { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"fullName\": \"Postman Driver Updated\",\n  \"phone\": \"0908333444\",\n  \"email\": \"postman.driver.updated@example.com\",\n  \"licenseNumber\": \"LIC-POSTMAN-002\",\n  \"status\": \"ACTIVE\"\n}"
+        },
+        "url": "{{baseUrl}}/api/logiflow/drivers/{{driverId}}"
+      }
+    },
+    {
+      "name": "Logiflow - Delete Driver",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          { "key": "X-Tenant-Code", "value": "{{tenantCode}}" },
+          { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+        ],
+        "url": "{{baseUrl}}/api/logiflow/drivers/{{driverId}}"
+      }
+    },
+    {
+      "name": "Logiflow - Create Vehicle",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const json = pm.response.json();",
+              "pm.collectionVariables.set('vehicleId', json.data.id);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "X-Tenant-Code", "value": "{{tenantCode}}" },
+          { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"vehicleCode\": \"VEH-POSTMAN-001\",\n  \"plateNumber\": \"51A-12345\",\n  \"vehicleType\": \"VAN\",\n  \"capacityKg\": 1200\n}"
+        },
+        "url": "{{baseUrl}}/api/logiflow/vehicles"
+      }
+    },
+    {
+      "name": "Logiflow - Get Vehicle",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "X-Tenant-Code", "value": "{{tenantCode}}" },
+          { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+        ],
+        "url": "{{baseUrl}}/api/logiflow/vehicles/{{vehicleId}}"
+      }
+    },
+    {
+      "name": "Logiflow - List Vehicles",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "X-Tenant-Code", "value": "{{tenantCode}}" },
+          { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+        ],
+        "url": "{{baseUrl}}/api/logiflow/vehicles?page=0&size=10&status=ACTIVE&keyword=51A"
+      }
+    },
+    {
+      "name": "Logiflow - Update Vehicle",
+      "request": {
+        "method": "PUT",
+        "header": [
+          { "key": "X-Tenant-Code", "value": "{{tenantCode}}" },
+          { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"plateNumber\": \"51A-67890\",\n  \"vehicleType\": \"TRUCK\",\n  \"capacityKg\": 2500,\n  \"status\": \"ACTIVE\"\n}"
+        },
+        "url": "{{baseUrl}}/api/logiflow/vehicles/{{vehicleId}}"
+      }
+    },
+    {
+      "name": "Logiflow - Delete Vehicle",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          { "key": "X-Tenant-Code", "value": "{{tenantCode}}" },
+          { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+        ],
+        "url": "{{baseUrl}}/api/logiflow/vehicles/{{vehicleId}}"
+      }
+    },
+    {
+      "name": "Logiflow - COD Summary",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "X-Tenant-Code", "value": "{{tenantCode}}" },
+          { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+        ],
+        "url": "{{baseUrl}}/api/logiflow/operations/cod/summary"
+      }
+    },
+    {
+      "name": "Logiflow - COD Daily Report",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "X-Tenant-Code", "value": "{{tenantCode}}" },
+          { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+        ],
+        "url": "{{baseUrl}}/api/logiflow/operations/cod/daily?fromDate=2026-05-01&toDate=2026-05-12"
+      }
+    },
+    {
+      "name": "Logiflow - Reconciliation By Driver Report",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "X-Tenant-Code", "value": "{{tenantCode}}" },
+          { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+        ],
+        "url": "{{baseUrl}}/api/logiflow/operations/reconciliation/by-driver?fromDate=2026-05-01&toDate=2026-05-12"
+      }
+    },
+    {
+      "name": "Logiflow - List Eligible COD",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "X-Tenant-Code", "value": "{{tenantCode}}" },
+          { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+        ],
+        "url": "{{baseUrl}}/api/logiflow/reconciliations/eligible-cod?page=0&size=10&keyword="
+      }
+    },
+    {
+      "name": "Logiflow - Create Reconciliation",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const json = pm.response.json();",
+              "pm.collectionVariables.set('reconciliationId', json.data.id);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "X-Tenant-Code", "value": "{{tenantCode}}" },
+          { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"driverId\": \"{{driverId}}\",\n  \"codRecordIds\": [\n    \"00000000-0000-0000-0000-000000000001\"\n  ],\n  \"note\": \"batch reconciliation from postman\"\n}"
+        },
+        "url": "{{baseUrl}}/api/logiflow/reconciliations"
+      }
+    },
+    {
+      "name": "Logiflow - List Reconciliations",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "X-Tenant-Code", "value": "{{tenantCode}}" },
+          { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+        ],
+        "url": "{{baseUrl}}/api/logiflow/reconciliations?page=0&size=10&status=OPEN&keyword="
+      }
+    },
+    {
+      "name": "Logiflow - Get Reconciliation",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "X-Tenant-Code", "value": "{{tenantCode}}" },
+          { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+        ],
+        "url": "{{baseUrl}}/api/logiflow/reconciliations/{{reconciliationId}}"
+      }
+    },
+    {
+      "name": "Logiflow - Update Reconciliation Status",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          { "key": "X-Tenant-Code", "value": "{{tenantCode}}" },
+          { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"status\": \"RECONCILED\",\n  \"note\": \"confirmed by accountant\"\n}"
+        },
+        "url": "{{baseUrl}}/api/logiflow/reconciliations/{{reconciliationId}}/status"
+      }
+    },
+    {
       "name": "Auth - Logout",
       "request": {
         "method": "POST",
@@ -237,6 +578,10 @@
     { "key": "tenantCode", "value": "demo" },
     { "key": "accessToken", "value": "" },
     { "key": "refreshToken", "value": "" },
-    { "key": "orderId", "value": "" }
+    { "key": "orderId", "value": "" },
+    { "key": "customerId", "value": "" },
+    { "key": "driverId", "value": "" },
+    { "key": "vehicleId", "value": "" },
+    { "key": "reconciliationId", "value": "" }
   ]
 }

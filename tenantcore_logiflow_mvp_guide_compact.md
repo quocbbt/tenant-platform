@@ -1,166 +1,178 @@
-# TenantCore + LogiFlow MVP - Guide Rút Gọn (Unified Flow)
+# TenantCore + LogiFlow MVP - Compact Guide (Unified Flow)
 
-## 1) Mục tiêu & phạm vi
-- Duy trì kiến trúc hiện tại, không tách service thêm ở MVP.
-- Luồng thống nhất: `gateway-service (8080)` -> `core-service (8081)` / `logiflow-service (8082)` -> Neon PostgreSQL.
-- Multi-tenant bắt buộc: mọi bảng nghiệp vụ có `tenant_code`, mọi query nghiệp vụ phải filter `tenant_code`.
+## 1) Goal and Scope
+- Keep current Maven multi-module architecture, do not split new services in MVP.
+- Unified runtime flow:
+  - `gateway-service (8080)` -> `core-service (8081)` / `logiflow-service (8082)` -> Neon PostgreSQL.
+- Strict multi-tenant:
+  - Business tables include `tenant_code`.
+  - Business queries must always filter by `tenant_code`.
 
-## 2) Kiến trúc module
-- `common-lib`: DTO, exception, context, constants dùng chung.
-- `core-service` (Spring MVC): IAM + Flyway migration.
-- `logiflow-service` (Spring MVC): nghiệp vụ logistics, dùng DB, tắt Flyway.
-- `gateway-service` (Spring Cloud Gateway WebFlux): route + security/filter gateway.
+## 2) Modules
+- `common-lib`: shared DTO, exception, context, security constants.
+- `core-service`: IAM + Flyway migrations.
+- `logiflow-service`: logistics business APIs (DB-backed), Flyway disabled.
+- `gateway-service`: route and gateway security/filter.
 
-## 3) Chuẩn kỹ thuật
-- Java 21, Maven multi-module, Spring Boot 3.5.x, Spring Cloud 2025.0.x.
-- PostgreSQL (Neon), JPA, Flyway (chỉ `core-service`).
+## 3) Technical Baseline
+- Java 21, Maven multi-module.
+- Spring Boot 3.5.x, Spring Cloud 2025.0.x.
+- PostgreSQL (Neon), Spring Data JPA, Flyway in `core-service` only.
 
-## 4) Quy tắc config quan trọng
-- Không hard-code secret trong production.
-- Hiện tại test đang gắn trực tiếp DB trong:
+## 4) Runtime Config Rule
+- Production: do not hard-code secrets.
+- Current test mode (temporary): DB connection string/password are directly configured in:
   - `core-service/src/main/resources/application.yaml`
   - `logiflow-service/src/main/resources/application.yaml`
-- Khi chuyển môi trường chuẩn: đổi lại dùng env var `NEON_DB_PASSWORD`.
 
-## 5) Trạng thái đã hoàn thành (tính đến 2026-05-11)
-- [x] Stage 1: Chuẩn hóa Maven multi-module.
-- [x] Stage 2: Hoàn thiện `common-lib` (DTO/exception/context/security).
-- [x] Stage 3: Bootstrapping service + health API + gateway routes.
-- [x] Stage 4: Kết nối Neon config cho core/logiflow.
-- [x] Stage 5: Flyway runtime verify thành công (`schema version 003`, health core OK).
-- [x] Stage 6: Mock API:
+## 5) Current Delivery Status (as of 2026-05-12)
+- [x] Stage 1-6 completed (module baseline, common-lib, health, gateway routes, Flyway, auth mock to real).
+- [x] Real auth flow on `core-service`:
+  - `POST /api/auth/setup-password`
   - `POST /api/auth/login`
   - `GET /api/auth/me`
-  - `POST /api/logiflow/orders`
-  - `GET /api/logiflow/orders/{id}`
-- [~] Stage 7 (đang làm):
-  - [x] Đã tạo `BaseEntity`
-  - [x] Đã tạo IAM entities/repositories trong `core-service`:
-    - `Tenant`, `User`, `Role`, `Permission`, `RefreshToken`
-    - bảng liên kết `user_roles`, `role_permissions`
-  - [x] Đã chuyển `/api/auth/login` và `/api/auth/me` sang logic thật (BCrypt + JWT + DB lookup)
-  - [x] Đã thêm migration `V004__seed_demo_admin_user.sql` để seed user demo + OWNER role mapping
-  - [x] Đã khôi phục `GlobalExceptionHandler` trong `common-lib` để trả lỗi chuẩn `ErrorResponse`
-  - [x] Đã thêm setup API `POST /api/auth/setup-password` để set BCrypt password cho user demo khi cần
-  - [x] Đã verify end-to-end (core-service trực tiếp):
-    - `POST /api/auth/setup-password` -> SUCCESS
-    - `POST /api/auth/login` -> SUCCESS (trả accessToken/refreshToken)
-    - `GET /api/auth/me` với Bearer token -> SUCCESS
-  - [x] Đã thêm auth API thật:
-    - `POST /api/auth/refresh`
-    - `POST /api/auth/logout`
-  - [x] Đã verify flow auth đầy đủ trên core-service:
-    - `login` SUCCESS
-    - `refresh` SUCCESS
-    - `me` SUCCESS
-    - `logout` SUCCESS
-    - `refresh` sau `logout` trả 401 (đúng kỳ vọng)
+  - `POST /api/auth/refresh`
+  - `POST /api/auth/logout`
+- [x] Order flow on `logiflow-service` (tenant-aware):
+  - create/get/list/update-status/assign/tracking/cod.
+- [x] JWT security enforcement:
+  - no token -> 401
+  - tenant mismatch (`X-Tenant-Code` vs token) -> 403
+  - endpoint permission checks enabled.
+- [x] Refactor architecture separation per module:
+  - `api` + `web` + `application` + `service`.
+- [x] Customer flow implemented on `logiflow-service` (tenant-aware):
+  - `POST /api/logiflow/customers`
+  - `GET /api/logiflow/customers/{id}`
+  - `GET /api/logiflow/customers?page=&size=&status=&keyword=`
+  - `PUT /api/logiflow/customers/{id}`
+  - `DELETE /api/logiflow/customers/{id}` (soft delete).
+- [x] Customer permission enforcement implemented:
+  - `LOGIFLOW_CUSTOMER_VIEW`
+  - `LOGIFLOW_CUSTOMER_CREATE`
+  - `LOGIFLOW_CUSTOMER_UPDATE`
+  - `LOGIFLOW_CUSTOMER_DELETE`
+- [x] Driver flow implemented on `logiflow-service` (tenant-aware):
+  - `POST /api/logiflow/drivers`
+  - `GET /api/logiflow/drivers/{id}`
+  - `GET /api/logiflow/drivers?page=&size=&status=&keyword=`
+  - `PUT /api/logiflow/drivers/{id}`
+  - `DELETE /api/logiflow/drivers/{id}` (soft delete).
+- [x] Driver permission enforcement implemented:
+  - `LOGIFLOW_DRIVER_VIEW`
+  - `LOGIFLOW_DRIVER_CREATE`
+  - `LOGIFLOW_DRIVER_UPDATE`
+  - `LOGIFLOW_DRIVER_DELETE`
+- [x] Vehicle flow implemented on `logiflow-service` (tenant-aware):
+  - `POST /api/logiflow/vehicles`
+  - `GET /api/logiflow/vehicles/{id}`
+  - `GET /api/logiflow/vehicles?page=&size=&status=&keyword=`
+  - `PUT /api/logiflow/vehicles/{id}`
+  - `DELETE /api/logiflow/vehicles/{id}` (soft delete).
+- [x] Vehicle permission enforcement implemented:
+  - `LOGIFLOW_VEHICLE_VIEW`
+  - `LOGIFLOW_VEHICLE_CREATE`
+  - `LOGIFLOW_VEHICLE_UPDATE`
+  - `LOGIFLOW_VEHICLE_DELETE`
+- [x] Operations read model implemented (tenant-aware):
+  - `GET /api/logiflow/operations/cod/summary`
+  - response includes COD total/pending/collected/reconciled amounts.
+- [x] Reconciliation read model implemented (tenant-aware):
+  - `GET /api/logiflow/reconciliations?page=&size=&status=&keyword=`
+  - `GET /api/logiflow/reconciliations/{id}`
+  - protected by `LOGIFLOW_RECONCILIATION_VIEW`.
+- [x] Reconciliation write flow implemented (tenant-aware):
+  - `POST /api/logiflow/reconciliations` (`LOGIFLOW_RECONCILIATION_CREATE`)
+  - `PATCH /api/logiflow/reconciliations/{id}/status` (`LOGIFLOW_RECONCILIATION_UPDATE`)
+  - supports linking COD records with reconciliation.
+- [x] Focused integration tests added for critical security path (`logiflow-service`):
+  - no token access on protected order endpoint -> forbidden
+  - token without required permission -> forbidden
+  - tenant header mismatch vs token claim -> forbidden
+  - valid token + permission + tenant -> success
+  - file: `logiflow-service/src/test/java/com/tenantcore/logiflowservice/security/OrderSecurityIntegrationTest.java`
+- [x] Flyway migration `V005` applied successfully in `core-service`:
+  - added `reconciliation_id` on `logiflow_cod_records`
+  - added FK to `logiflow_reconciliations`
+  - added index `(tenant_code, reconciliation_id)`
+- [x] Gateway E2E reconciliation write flow verified:
+  - login -> create order -> update COD (`COLLECTED`) -> create reconciliation -> update status (`RECONCILED`)
+  - reconciliation detail returns `RECONCILED`
+  - COD summary now reflects reconciled amount correctly.
+- [x] Eligible COD read endpoint added (tenant-aware):
+  - `GET /api/logiflow/reconciliations/eligible-cod?page=&size=&keyword=`
+  - returns COD records with status `COLLECTED` and not linked to reconciliation.
+- [x] Reconciliation write flow tests added (`logiflow-service`):
+  - file: `src/test/java/com/tenantcore/logiflowservice/reconciliation/ReconciliationServiceTest.java`
+  - covers:
+    - create reconciliation aggregates amount + links COD records
+    - reject invalid COD status when creating reconciliation
+    - update status `RECONCILED` syncs COD records
+    - update status `CANCELLED` unlinks/rolls back COD records
+- [x] Gateway E2E automation script added and verified:
+  - script: `tools/e2e_reconciliation_gateway.ps1`
+  - flow: auth -> create order -> update COD -> list eligible COD -> create reconciliation -> update status RECONCILED -> verify COD summary
+  - latest run result: SUCCESS (2026-05-12)
+- [x] Authorization matrix integration tests expanded:
+  - file: `src/test/java/com/tenantcore/logiflowservice/security/AuthorizationMatrixIntegrationTest.java`
+  - covered modules/endpoints:
+    - customer list (`LOGIFLOW_CUSTOMER_VIEW`)
+    - driver list (`LOGIFLOW_DRIVER_VIEW`)
+    - vehicle list (`LOGIFLOW_VEHICLE_VIEW`)
+    - reconciliation list (`LOGIFLOW_RECONCILIATION_VIEW`)
+    - COD summary (`LOGIFLOW_COD_VIEW`)
+  - includes tenant mismatch forbidden case.
+- [x] Write-permission integration tests added:
+  - file: `src/test/java/com/tenantcore/logiflowservice/security/AuthorizationWriteIntegrationTest.java`
+  - covered permissions:
+    - customer: `CREATE/UPDATE/DELETE`
+    - driver: `CREATE/UPDATE/DELETE`
+    - vehicle: `CREATE/UPDATE/DELETE`
+    - reconciliation: `CREATE` + `UPDATE(status)`
+  - verifies forbidden without permission and success with correct permission.
+- [x] OpenAPI/Swagger enabled for `logiflow-service`:
+  - OpenAPI JSON: `/v3/api-docs`
+  - Swagger UI: `/swagger-ui/index.html`
+  - security permits swagger endpoints as public.
+- [x] Permission mapping table documented:
+  - `docs/logiflow-permission-matrix.md`
+- [x] Operations read-model expanded (date/driver analytics):
+  - `GET /api/logiflow/operations/cod/daily?fromDate=&toDate=`
+  - `GET /api/logiflow/operations/reconciliation/by-driver?fromDate=&toDate=`
+  - default range: last 7 days, max 31 days.
+- [x] OpenAPI descriptions/tags added for key operations/reconciliation endpoints.
 
-## 6) Luồng chạy local thống nhất
-1. Start `core-service` (8081).
-2. Start `logiflow-service` (8082).
-3. Start `gateway-service` (8080).
-4. Test qua gateway trước:
-   - `GET /api/core/health`
-   - `GET /api/logiflow/health`
-   - `POST /api/auth/login`
-   - `GET /api/auth/me`
-   - `POST /api/logiflow/orders`
-   - `GET /api/logiflow/orders/{id}`
-
-Ghi chú thực tế:
-- `gateway-service` cần `SecurityWebFilterChain` permit `"/api/**"` trong giai đoạn MVP, nếu không gateway sẽ trả `401` trước khi route.
-
-Postman qua gateway:
-- Collection: `postman/tenantcore-gateway-mvp.postman_collection.json`
-- Biến chính:
+## 6) Postman Through Gateway
+- File: `postman/tenantcore-gateway-mvp.postman_collection.json`
+- Base variables:
   - `baseUrl = http://localhost:8080`
   - `tenantCode = demo`
-  - `accessToken`, `refreshToken`, `orderId` được set tự động sau request login/create-order
+- Auto variables:
+  - `accessToken`, `refreshToken`, `orderId`, `customerId`, `driverId`, `vehicleId`, `reconciliationId`
+- Includes end-to-end requests for:
+  - health, auth, order, customer, driver, vehicle, operations summary, reconciliation read/write flows via gateway.
 
-Kết quả verify qua gateway (`:8080`) đã pass:
-- `GET /api/core/health` -> SUCCESS
-- `GET /api/logiflow/health` -> SUCCESS
-- `POST /api/auth/setup-password` -> SUCCESS
-- `POST /api/auth/login` -> SUCCESS
-- `GET /api/auth/me` -> SUCCESS
-- `POST /api/auth/refresh` -> SUCCESS
-- `POST /api/logiflow/orders` -> SUCCESS
-- `GET /api/logiflow/orders/{id}` -> SUCCESS
-- `POST /api/auth/logout` -> SUCCESS
-- `POST /api/auth/refresh` sau logout -> 401 (expected)
+## 7) Mandatory Local Run Order
+1. Start `core-service` on `8081`.
+2. Start `logiflow-service` on `8082`.
+3. Start `gateway-service` on `8080`.
+4. Verify through gateway first:
+  - `/api/core/health`, `/api/logiflow/health`
+  - auth flow -> order/customer business flow.
 
-## 7) Nguyên tắc migration
-- Migration nằm ở `core-service/src/main/resources/db/migration`.
-- Không sửa migration đã chạy trên DB có dữ liệu thật.
-- Cần thay đổi schema: tạo version migration mới.
+## 8) Migration Rule
+- Migration files live in `core-service/src/main/resources/db/migration`.
+- Never edit applied migration on live DB.
+- Schema change must be a new migration version.
 
-## 8) Quy tắc coding trước Stage 7
-- Ưu tiên reuse class từ `common-lib` cho response/error.
-- API trả theo `ApiResponse` / `ErrorResponse`.
-- Lỗi nghiệp vụ dùng `BusinessException` + `ErrorCode`.
-- Không mở rộng phạm vi ngoài checklist Stage 7.
+## 9) Next Priority Backlog (single stream)
+1. Stabilize reconciliation APIs:
+   - add stronger validation by driver/time-window policy (if required by business).
+2. Add request/response examples for create/update endpoints directly via OpenAPI annotations.
 
-## 9) Kế hoạch thực thi Stage 7 (thứ tự bắt buộc)
-1. Tạo `BaseEntity` + chuẩn hóa cột audit.
-2. Chuẩn hóa tenant mapping (`tenant_code`) cho entity nghiệp vụ.
-3. Tạo entity/repository nhóm IAM trong `core-service`:
-   - `Tenant`, `User`, `Role`, `Permission`, `RefreshToken`.
-4. Làm auth thật:
-   - BCrypt password
-   - JWT service
-   - login / refresh / logout / me
-5. Chuyển dần mock API sang service thật, vẫn giữ contract endpoint hiện tại.
-6. Sau mỗi nhóm thay đổi: `mvn clean install -DskipTests`.
-
-Tiến độ Stage 7 mới nhất:
-- [x] Đã chuyển `logiflow orders` từ mock sang DB-backed trong `logiflow-service`:
-  - entity: `logiflow_orders`
-  - repository: query theo `(id, tenant_code)`
-  - service: create/get theo tenant
-  - controller giữ nguyên endpoint contract cũ
-- [x] Đã verify qua gateway:
-  - `POST /api/logiflow/orders` -> SUCCESS
-  - `GET /api/logiflow/orders/{id}` -> SUCCESS
-  - dữ liệu `id/orderCode/tenantCode` khớp giữa create và get
-- [x] Đã refactor tách lớp rõ ràng theo module:
-  - `core-service/auth`: `api` + `web (controller impl)` + `application (facade)` + `service`
-  - `logiflow-service/order`: `api` + `web (controller impl)` + `application (facade)` + `service`
-- [x] Smoke test sau refactor qua gateway:
-  - `setup-password`, `login`, `me`, `create order`, `get order` đều SUCCESS
-- [x] Đã mở rộng order use-case thật:
-  - `GET /api/logiflow/orders?page=&size=&status=&keyword=`
-  - phân trang bằng `PageResponse`, query luôn filter theo `tenant_code`
-  - verify qua gateway: list all + keyword filter đều SUCCESS
-- [~] Đang bổ sung order status workflow:
-  - `PATCH /api/logiflow/orders/{id}/status`
-  - cập nhật trạng thái tenant-aware (NEW/ASSIGNED/IN_TRANSIT/COMPLETED/CANCELLED)
-- [x] Đã verify order status workflow qua gateway:
-  - create order -> update status COMPLETED -> get order trả status COMPLETED
-  - list filter theo `status=COMPLETED` + `keyword` trả kết quả đúng
-- [x] Đã bổ sung JWT auth filter ở `core-service`:
-  - parse Bearer token thành security context
-  - security stateless + authenticated cho endpoint không-public
-  - verify qua gateway:
-    - `/api/auth/me` có token -> SUCCESS
-    - `/api/auth/me` không token -> 401 (expected)
-- [~] Đang bổ sung security enforcement cho `logiflow-service`:
-  - JWT filter parse token + set security context
-  - enforce tenant header/token mismatch -> 403
-  - enforce permission theo endpoint order (VIEW/CREATE/UPDATE)
-- [x] Đã verify security enforcement qua gateway:
-  - gọi order API không token -> 401 (expected)
-  - token hợp lệ nhưng `X-Tenant-Code` sai -> 403 (expected)
-  - token + tenant đúng -> create/list order SUCCESS
-- [x] Đã triển khai logistics workflow tiếp theo:
-  - `POST /api/logiflow/orders/{id}/assign`
-  - `POST /api/logiflow/orders/{id}/tracking`
-  - `POST /api/logiflow/orders/{id}/cod`
-  - verify qua gateway: create -> assign -> tracking -> cod đều SUCCESS, và no-token assign trả 401
-
-## 10) Definition of Done cho Stage 7
-- Build pass toàn bộ project.
-- Auth flow thật chạy qua gateway.
-- Query nghiệp vụ luôn có tenant filter.
-- Không lộ password/secret trong source commit.
-- Guide trạng thái được cập nhật lại sau mỗi mốc hoàn thành.
+## 10) Definition of Done for Stage 7
+- Full project build passes.
+- Real auth works through gateway.
+- Tenant filtering enforced on business queries.
+- No secret leakage in commit history.
+- Guide is updated after every completed milestone.

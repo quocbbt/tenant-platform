@@ -1,4 +1,4 @@
-package com.tenantcore.logiflowservice.order;
+package com.tenantcore.logiflowservice.vehicle;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -14,8 +14,8 @@ import java.util.UUID;
 @Getter
 @Setter
 @Entity
-@Table(name = "logiflow_cod_records")
-public class CodRecordEntity {
+@Table(name = "logiflow_vehicles")
+public class VehicleEntity {
 
     @Id
     private UUID id;
@@ -23,27 +23,27 @@ public class CodRecordEntity {
     @Column(name = "tenant_code", nullable = false, length = 50)
     private String tenantCode;
 
-    @Column(name = "order_id", nullable = false)
-    private UUID orderId;
+    @Column(name = "vehicle_code", nullable = false, length = 100)
+    private String vehicleCode;
 
-    @Column(name = "reconciliation_id")
-    private UUID reconciliationId;
+    @Column(name = "plate_number", nullable = false, length = 50)
+    private String plateNumber;
 
-    @Column(nullable = false, precision = 14, scale = 2)
-    private BigDecimal amount;
+    @Column(name = "vehicle_type", length = 50)
+    private String vehicleType;
+
+    @Column(name = "capacity_kg", precision = 12, scale = 2)
+    private BigDecimal capacityKg;
 
     @Column(nullable = false, length = 30)
     private String status;
-
-    @Column(name = "reconciled_at")
-    private LocalDateTime reconciledAt;
-
-    @Column(columnDefinition = "TEXT")
-    private String note;
 
     @Column(name = "created_at", insertable = false, updatable = false)
     private LocalDateTime createdAt;
 
     @Column(name = "updated_at", insertable = false, updatable = false)
     private LocalDateTime updatedAt;
+
+    @Column(name = "deleted_at")
+    private LocalDateTime deletedAt;
 }
