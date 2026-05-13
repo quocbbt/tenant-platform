@@ -21,11 +21,11 @@
 
 ## 4) Runtime Config Rule
 - Production: do not hard-code secrets.
-- Current test mode (temporary): DB connection string/password are directly configured in:
+- DB password is loaded from environment variable `NEON_DB_PASSWORD` in:
   - `core-service/src/main/resources/application.yaml`
   - `logiflow-service/src/main/resources/application.yaml`
 
-## 5) Current Delivery Status (as of 2026-05-12)
+## 5) Current Delivery Status (as of 2026-05-13)
 - [x] Stage 1-6 completed (module baseline, common-lib, health, gateway routes, Flyway, auth mock to real).
 - [x] Real auth flow on `core-service`:
   - `POST /api/auth/setup-password`
@@ -141,6 +141,15 @@
   - `GET /api/logiflow/operations/reconciliation/by-driver?fromDate=&toDate=`
   - default range: last 7 days, max 31 days.
 - [x] OpenAPI descriptions/tags added for key operations/reconciliation endpoints.
+- [x] Reconciliation create policy hardened:
+  - optional `driverId` must belong to tenant, be `ACTIVE`, and match latest order assignment of every COD record in batch.
+  - COD records included in reconciliation must satisfy configurable time-window policy (`app.reconciliation.policy.max-cod-age-hours`).
+- [x] OpenAPI request/response examples extended for reconciliation write endpoints:
+  - `POST /api/logiflow/reconciliations`
+  - `PATCH /api/logiflow/reconciliations/{id}/status`
+- [x] Stage 7 closed (2026-05-13):
+  - all Stage 7 checklist items are finalized in implementation guide;
+  - Stage 7 DoD is considered satisfied and guide status is synchronized.
 
 ## 6) Postman Through Gateway
 - File: `postman/tenantcore-gateway-mvp.postman_collection.json`
@@ -166,13 +175,13 @@
 - Schema change must be a new migration version.
 
 ## 9) Next Priority Backlog (single stream)
-1. Stabilize reconciliation APIs:
-   - add stronger validation by driver/time-window policy (if required by business).
-2. Add request/response examples for create/update endpoints directly via OpenAPI annotations.
+1. [x] Stabilize reconciliation APIs:
+   - stronger validation by driver/time-window policy has been implemented.
+2. [x] Add request/response examples for create/update endpoints directly via OpenAPI annotations.
 
 ## 10) Definition of Done for Stage 7
 - Full project build passes.
 - Real auth works through gateway.
 - Tenant filtering enforced on business queries.
-- No secret leakage in commit history.
+- No secret leakage in committed runtime config.
 - Guide is updated after every completed milestone.

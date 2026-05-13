@@ -8,8 +8,12 @@ import com.tenantcore.logiflowservice.api.reconciliation.dto.ListEligibleCodQuer
 import com.tenantcore.logiflowservice.api.reconciliation.dto.ListReconciliationsQuery;
 import com.tenantcore.logiflowservice.api.reconciliation.dto.ReconciliationResponse;
 import com.tenantcore.logiflowservice.api.reconciliation.dto.UpdateReconciliationStatusRequest;
+import com.tenantcore.logiflowservice.driver.DriverEntity;
+import com.tenantcore.logiflowservice.driver.DriverRepository;
 import com.tenantcore.logiflowservice.order.CodRecordEntity;
 import com.tenantcore.logiflowservice.order.CodRecordRepository;
+import com.tenantcore.logiflowservice.order.DeliveryAssignmentEntity;
+import com.tenantcore.logiflowservice.order.DeliveryAssignmentRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -18,8 +22,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -27,17 +33,27 @@ public class ReconciliationService {
 
     private final ReconciliationRepository reconciliationRepository;
     private final CodRecordRepository codRecordRepository;
+    private final DriverRepository driverRepository;
+    private final DeliveryAssignmentRepository deliveryAssignmentRepository;
+    private final ReconciliationPolicyProperties reconciliationPolicyProperties;
 
     public ReconciliationService(
             ReconciliationRepository reconciliationRepository,
-            CodRecordRepository codRecordRepository
+            CodRecordRepository codRecordRepository,
+            DriverRepository driverRepository,
+            DeliveryAssignmentRepository deliveryAssignmentRepository,
+            ReconciliationPolicyProperties reconciliationPolicyProperties
     ) {
         this.reconciliationRepository = reconciliationRepository;
         this.codRecordRepository = codRecordRepository;
+        this.driverRepository = driverRepository;
+        this.deliveryAssignmentRepository = deliveryAssignmentRepository;
+        this.reconciliationPolicyProperties = reconciliationPolicyProperties;
     }
 
     @Transactional
     public ReconciliationResponse createReconciliation(String tenantCode, CreateReconciliationRequest request) {
+        LocalDateTime now = LocalDateTime.now();
         List<UUID> uniqueIds = request.codRecordIds().stream().distinct().toList();
         List<CodRecordEntity> codRecords = codRecordRepository.findByTenantCodeAndIdIn(tenantCode, uniqueIds);
         if (codRecords.size() != uniqueIds.size()) {
@@ -55,6 +71,11 @@ public class ReconciliationService {
             }
             totalAmount = totalAmount.add(cod.getAmount());
             orderIds.add(cod.getOrderId());
+        }
+
+        validateCodTimeWindow(codRecords, now);
+        if (request.driverId() != null) {
+            validateDriverPolicy(tenantCode, request.driverId(), codRecords);
         }
 
         ReconciliationEntity entity = new ReconciliationEntity();
@@ -137,6 +158,54 @@ public class ReconciliationService {
         return toResponse(reconciliationRepository.save(entity));
     }
 
+    private void validateCodTimeWindow(List<CodRecordEntity> codRecords, LocalDateTime now) {
+        int maxCodAgeHours = reconciliationPolicyProperties.normalizedMaxCodAgeHours();
+        if (maxCodAgeHours == 0) {
+            return;
+        }
+        LocalDateTime windowStart = now.minusHours(maxCodAgeHours);
+        for (CodRecordEntity cod : codRecords) {
+            LocalDateTime codTimestamp = resolveCodTimestamp(cod);
+            if (codTimestamp.isBefore(windowStart)) {
+                throw new BusinessException(
+                        ErrorCode.BAD_REQUEST,
+                        "COD record outside reconciliation time window: " + cod.getId()
+                );
+            }
+        }
+    }
+
+    private void validateDriverPolicy(String tenantCode, UUID driverId, List<CodRecordEntity> codRecords) {
+        DriverEntity driver = driverRepository.findByIdAndTenantCodeAndDeletedAtIsNull(driverId, tenantCode)
+                .orElseThrow(() -> new BusinessException(ErrorCode.BAD_REQUEST, "Driver is invalid for tenant"));
+        if (!"ACTIVE".equals(driver.getStatus())) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "Driver must be ACTIVE for reconciliation");
+        }
+
+        if (!reconciliationPolicyProperties.enforceDriverAssignment()) {
+            return;
+        }
+
+        List<UUID> orderIds = codRecords.stream().map(CodRecordEntity::getOrderId).distinct().toList();
+        List<DeliveryAssignmentEntity> assignments = deliveryAssignmentRepository
+                .findByTenantCodeAndOrderIdInAndDeletedAtIsNullOrderByAssignedAtDesc(tenantCode, orderIds);
+
+        Map<UUID, DeliveryAssignmentEntity> latestAssignmentByOrder = new HashMap<>();
+        for (DeliveryAssignmentEntity assignment : assignments) {
+            latestAssignmentByOrder.putIfAbsent(assignment.getOrderId(), assignment);
+        }
+
+        for (CodRecordEntity cod : codRecords) {
+            DeliveryAssignmentEntity assignment = latestAssignmentByOrder.get(cod.getOrderId());
+            if (assignment == null || assignment.getDriverId() == null || !driverId.equals(assignment.getDriverId())) {
+                throw new BusinessException(
+                        ErrorCode.BAD_REQUEST,
+                        "COD record does not belong to selected driver assignment: " + cod.getId()
+                );
+            }
+        }
+    }
+
     private ReconciliationResponse toResponse(ReconciliationEntity entity) {
         return new ReconciliationResponse(
                 entity.getId(),
@@ -157,6 +226,16 @@ public class ReconciliationService {
             return null;
         }
         return value.trim();
+    }
+
+    private LocalDateTime resolveCodTimestamp(CodRecordEntity cod) {
+        if (cod.getCreatedAt() != null) {
+            return cod.getCreatedAt();
+        }
+        if (cod.getUpdatedAt() != null) {
+            return cod.getUpdatedAt();
+        }
+        return LocalDateTime.now();
     }
 
     private String normalizeStatus(String status) {

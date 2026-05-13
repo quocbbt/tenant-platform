@@ -3,8 +3,13 @@ package com.tenantcore.logiflowservice.reconciliation;
 import com.tenantcore.common.exception.BusinessException;
 import com.tenantcore.logiflowservice.api.reconciliation.dto.CreateReconciliationRequest;
 import com.tenantcore.logiflowservice.api.reconciliation.dto.UpdateReconciliationStatusRequest;
+import com.tenantcore.logiflowservice.driver.DriverEntity;
+import com.tenantcore.logiflowservice.driver.DriverRepository;
 import com.tenantcore.logiflowservice.order.CodRecordEntity;
 import com.tenantcore.logiflowservice.order.CodRecordRepository;
+import com.tenantcore.logiflowservice.order.DeliveryAssignmentEntity;
+import com.tenantcore.logiflowservice.order.DeliveryAssignmentRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -34,8 +39,23 @@ class ReconciliationServiceTest {
     @Mock
     private CodRecordRepository codRecordRepository;
 
+    @Mock
+    private DriverRepository driverRepository;
+
+    @Mock
+    private DeliveryAssignmentRepository deliveryAssignmentRepository;
+
+    @Mock
+    private ReconciliationPolicyProperties reconciliationPolicyProperties;
+
     @InjectMocks
     private ReconciliationService reconciliationService;
+
+    @BeforeEach
+    void setUp() {
+        when(reconciliationPolicyProperties.normalizedMaxCodAgeHours()).thenReturn(72);
+        when(reconciliationPolicyProperties.enforceDriverAssignment()).thenReturn(true);
+    }
 
     @Test
     void createReconciliation_shouldLinkCodRecordsAndAggregateAmount() {
@@ -81,6 +101,52 @@ class ReconciliationServiceTest {
                 () -> reconciliationService.createReconciliation(
                         tenantCode,
                         new CreateReconciliationRequest(null, List.of(codId), null)
+                )
+        );
+    }
+
+    @Test
+    void createReconciliation_shouldRejectExpiredCodRecord() {
+        String tenantCode = "demo";
+        UUID codId = UUID.randomUUID();
+        CodRecordEntity rec = cod(codId, UUID.randomUUID(), "COLLECTED", new BigDecimal("10000"));
+        rec.setCreatedAt(LocalDateTime.now().minusHours(100));
+        when(codRecordRepository.findByTenantCodeAndIdIn(eq(tenantCode), any())).thenReturn(List.of(rec));
+
+        assertThrows(
+                BusinessException.class,
+                () -> reconciliationService.createReconciliation(
+                        tenantCode,
+                        new CreateReconciliationRequest(null, List.of(codId), null)
+                )
+        );
+    }
+
+    @Test
+    void createReconciliation_shouldRejectDriverMismatchAssignment() {
+        String tenantCode = "demo";
+        UUID codId = UUID.randomUUID();
+        UUID orderId = UUID.randomUUID();
+        UUID requestedDriverId = UUID.randomUUID();
+        UUID assignedDriverId = UUID.randomUUID();
+
+        CodRecordEntity rec = cod(codId, orderId, "COLLECTED", new BigDecimal("10000"));
+        DriverEntity driver = new DriverEntity();
+        driver.setId(requestedDriverId);
+        driver.setTenantCode(tenantCode);
+        driver.setStatus("ACTIVE");
+
+        when(codRecordRepository.findByTenantCodeAndIdIn(eq(tenantCode), any())).thenReturn(List.of(rec));
+        when(driverRepository.findByIdAndTenantCodeAndDeletedAtIsNull(requestedDriverId, tenantCode))
+                .thenReturn(java.util.Optional.of(driver));
+        when(deliveryAssignmentRepository.findByTenantCodeAndOrderIdInAndDeletedAtIsNullOrderByAssignedAtDesc(eq(tenantCode), any()))
+                .thenReturn(List.of(assignment(orderId, assignedDriverId)));
+
+        assertThrows(
+                BusinessException.class,
+                () -> reconciliationService.createReconciliation(
+                        tenantCode,
+                        new CreateReconciliationRequest(requestedDriverId, List.of(codId), null)
                 )
         );
     }
@@ -146,7 +212,18 @@ class ReconciliationServiceTest {
         c.setOrderId(orderId);
         c.setStatus(status);
         c.setAmount(amount);
+        c.setCreatedAt(LocalDateTime.now().minusHours(1));
         return c;
+    }
+
+    private DeliveryAssignmentEntity assignment(UUID orderId, UUID driverId) {
+        DeliveryAssignmentEntity assignment = new DeliveryAssignmentEntity();
+        assignment.setId(UUID.randomUUID());
+        assignment.setTenantCode("demo");
+        assignment.setOrderId(orderId);
+        assignment.setDriverId(driverId);
+        assignment.setAssignedAt(LocalDateTime.now().minusMinutes(30));
+        return assignment;
     }
 
     private ReconciliationEntity reconciliation(UUID id, String tenantCode, String status) {

@@ -39,4 +39,7 @@ public class DeliveryAssignmentEntity {
 
     @Column(columnDefinition = "TEXT")
     private String note;
+
+    @Column(name = "deleted_at")
+    private LocalDateTime deletedAt;
 }

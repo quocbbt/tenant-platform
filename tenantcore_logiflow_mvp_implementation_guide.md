@@ -1557,19 +1557,19 @@ mvn -pl gateway-service -am clean install -DskipTests
 ### 15.7 Giai đoạn 7 — API thật sau khi DB ổn
 
 ```text
-[ ] Tạo BaseEntity
-[ ] Tạo TenantEntity hoặc mapping tenant_code chuẩn
-[ ] Tạo Tenant entity/repository
-[ ] Tạo User entity/repository
-[ ] Tạo Role entity/repository
-[ ] Tạo Permission entity/repository
-[ ] Tạo RefreshToken entity/repository
-[ ] Làm BCrypt password
-[ ] Làm JWT service
-[ ] Làm login thật
-[ ] Làm refresh token thật
-[ ] Làm logout/revoke token
-[ ] Làm /api/auth/me thật
+[x] Tạo BaseEntity
+[x] Tạo TenantEntity hoặc mapping tenant_code chuẩn
+[x] Tạo Tenant entity/repository
+[x] Tạo User entity/repository
+[x] Tạo Role entity/repository
+[x] Tạo Permission entity/repository
+[x] Tạo RefreshToken entity/repository
+[x] Làm BCrypt password
+[x] Làm JWT service
+[x] Làm login thật
+[x] Làm refresh token thật
+[x] Làm logout/revoke token
+[x] Làm /api/auth/me thật
 ```
 
 ---
@@ -1683,7 +1683,7 @@ Yêu cầu:
 
 ---
 
-## 19. Progress log (updated 2026-05-11)
+## 19. Progress log (updated 2026-05-13)
 
 ```text
 [x] Stage 1 - Maven multi-module normalized
@@ -1698,16 +1698,16 @@ Yêu cầu:
 [x] Stage 6 - mock logiflow order APIs: POST /api/logiflow/orders, GET /api/logiflow/orders/{id}
 [x] Build check after each change group with mvn clean install -DskipTests
 [x] Stage 5 runtime verify on Neon: completed on 2026-05-11 (DB auth fixed, Flyway validated 3 migrations, schema version 003, /api/core/health responded SUCCESS)
-[~] Stage 7 in progress (2026-05-11): added BaseEntity + IAM entities/repositories, implemented real auth foundation (BCrypt PasswordEncoder, JWT service, /api/auth/login + /api/auth/me via DB), added V004 seed demo user + OWNER mapping, restored GlobalExceptionHandler, added setup API /api/auth/setup-password; verified /setup-password -> /login -> /me success on core-service; added /api/auth/refresh and /api/auth/logout; verified login/refresh/me/logout flow and refresh-after-logout returned 401 as expected
-[~] Gateway integration note (2026-05-11): added gateway SecurityWebFilterChain to permit /api/** and /actuator/health for MVP routing tests (avoid gateway-level 401 before forwarding)
-[~] Gateway E2E verify (2026-05-11): core health/logiflow health/auth setup-login-me-refresh-logout and logiflow order create/get all passed via :8080; refresh-after-logout returned 401 as expected
-[~] Stage 7 progress (2026-05-11): logiflow order APIs transitioned from mock to DB-backed implementation in logiflow-service (entity/repository/service/controller, tenant-aware query by id+tenant_code)
-[~] Stage 7 verify (2026-05-11): gateway test passed for DB-backed logiflow orders (create/get success, id+orderCode+tenantCode consistent)
-[~] Stage 7 refactor (2026-05-11): applied layer separation by module (api contract, web controller impl, application facade, service) for core auth and logiflow order; smoke tests via gateway still passed
-[~] Stage 7 extension (2026-05-11): added DB-backed order list/search API with pagination and tenant filter (GET /api/logiflow/orders with page/size/status/keyword), verified list-all and keyword filter success via gateway
-[~] Stage 7 extension (2026-05-11): added order status update API PATCH /api/logiflow/orders/{id}/status (tenant-aware), verified create -> update COMPLETED -> get/list filter flow success via gateway
-[~] Tooling update (2026-05-11): added Postman collection for gateway flow at postman/tenantcore-gateway-mvp.postman_collection.json (health/auth/order/status workflow, with auto variable capture for accessToken/refreshToken/orderId)
-[~] Security hardening (2026-05-11): added core-service JWT authentication filter + stateless security; verified /api/auth/me requires valid bearer token (success with token, 401 without token via gateway)
-[~] Security hardening (2026-05-11): added logiflow-service JWT filter + permission checks (VIEW/CREATE/UPDATE) + tenant header/token enforcement; verified 401 for missing token, 403 for tenant mismatch, and success for valid token+tenant via gateway
-[~] Stage 7 logistics extension (2026-05-11): added assign/tracking/cod endpoints (POST /api/logiflow/orders/{id}/assign, /tracking, /cod) with tenant-aware security; verified create->assign->tracking->cod success and 401 for no-token assign via gateway
+[x] Stage 7 completed (2026-05-13): BaseEntity + IAM entities/repositories + BCrypt/JWT + real auth flow (`/setup-password`, `/login`, `/me`, `/refresh`, `/logout`) all finalized
+[x] Gateway integration note (2026-05-11): added gateway SecurityWebFilterChain to permit /api/** and /actuator/health for MVP routing tests (avoid gateway-level 401 before forwarding)
+[x] Gateway E2E verify (2026-05-11): core health/logiflow health/auth setup-login-me-refresh-logout and logiflow order create/get all passed via :8080; refresh-after-logout returned 401 as expected
+[x] Stage 7 progress (2026-05-11): logiflow order APIs transitioned from mock to DB-backed implementation in logiflow-service (entity/repository/service/controller, tenant-aware query by id+tenant_code)
+[x] Stage 7 verify (2026-05-11): gateway test passed for DB-backed logiflow orders (create/get success, id+orderCode+tenantCode consistent)
+[x] Stage 7 refactor (2026-05-11): applied layer separation by module (api contract, web controller impl, application facade, service) for core auth and logiflow order; smoke tests via gateway still passed
+[x] Stage 7 extension (2026-05-11): added DB-backed order list/search API with pagination and tenant filter (GET /api/logiflow/orders with page/size/status/keyword), verified list-all and keyword filter success via gateway
+[x] Stage 7 extension (2026-05-11): added order status update API PATCH /api/logiflow/orders/{id}/status (tenant-aware), verified create -> update COMPLETED -> get/list filter flow success via gateway
+[x] Tooling update (2026-05-11): added Postman collection for gateway flow at postman/tenantcore-gateway-mvp.postman_collection.json (health/auth/order/status workflow, with auto variable capture for accessToken/refreshToken/orderId)
+[x] Security hardening (2026-05-11): added core-service JWT authentication filter + stateless security; verified /api/auth/me requires valid bearer token (success with token, 401 without token via gateway)
+[x] Security hardening (2026-05-11): added logiflow-service JWT filter + permission checks (VIEW/CREATE/UPDATE) + tenant header/token enforcement; verified 401 for missing token, 403 for tenant mismatch, and success for valid token+tenant via gateway
+[x] Stage 7 logistics extension (2026-05-11): added assign/tracking/cod endpoints (POST /api/logiflow/orders/{id}/assign, /tracking, /cod) with tenant-aware security; verified create->assign->tracking->cod success and 401 for no-token assign via gateway
 ```
