@@ -9,11 +9,11 @@ spring:
     gateway:
       routes:
         - id: core-service
-          uri: http://localhost:8081
+          uri: ${CORE_SERVICE_URL:http://localhost:8081}
           predicates:
             - Path=/api/core/**,/api/auth/**,/api/users/**,/api/roles/**,/api/permissions/**,/api/files/**,/api/audit/**,/api/notifications/**
 
         - id: logiflow-service
-          uri: http://localhost:8082
+          uri: ${LOGIFLOW_SERVICE_URL:http://localhost:8082}
           predicates:
             - Path=/api/logiflow/**

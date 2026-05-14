@@ -1,0 +1,109 @@
+version: '3.9'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: tenant-platform-db
+    environment:
+      POSTGRES_DB: neondb
+      POSTGRES_USER: neondb_owner
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres123}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U neondb_owner"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - tenant-platform
+
+  # Core Service (IAM & Auth)
+  core-service:
+    build:
+      context: .
+      dockerfile: core-service/Dockerfile
+    container_name: tenant-core-service
+    environment:
+      NEON_DB_PASSWORD: ${POSTGRES_PASSWORD:-postgres123}
+      APP_JWT_SECRET: ${APP_JWT_SECRET:-tenantcore-dev-secret-change-me-tenantcore-dev-secret}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/neondb
+      SPRING_DATASOURCE_USERNAME: neondb_owner
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-postgres123}
+    ports:
+      - "8081:8081"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - tenant-platform
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8081/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # LogiFlow Service (Logistics & Order Management)
+  logiflow-service:
+    build:
+      context: .
+      dockerfile: logiflow-service/Dockerfile
+    container_name: tenant-logiflow-service
+    environment:
+      NEON_DB_PASSWORD: ${POSTGRES_PASSWORD:-postgres123}
+      APP_JWT_SECRET: ${APP_JWT_SECRET:-tenantcore-dev-secret-change-me-tenantcore-dev-secret}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/neondb
+      SPRING_DATASOURCE_USERNAME: neondb_owner
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-postgres123}
+    ports:
+      - "8082:8082"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      core-service:
+        condition: service_healthy
+    networks:
+      - tenant-platform
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8082/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # Gateway Service (API Gateway & Routing)
+  gateway-service:
+    build:
+      context: .
+      dockerfile: gateway-service/Dockerfile
+    container_name: tenant-gateway-service
+    environment:
+      CORE_SERVICE_URL: http://core-service:8081
+      LOGIFLOW_SERVICE_URL: http://logiflow-service:8082
+    ports:
+      - "8080:8080"
+    depends_on:
+      - core-service
+      - logiflow-service
+    networks:
+      - tenant-platform
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  postgres_data:
+
+networks:
+  tenant-platform:
+    driver: bridge

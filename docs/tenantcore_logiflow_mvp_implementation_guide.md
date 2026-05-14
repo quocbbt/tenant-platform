@@ -152,7 +152,7 @@ src/
 
 ```gitignore
 target/
-.idea/
+../.idea/
 *.iml
 .env
 *.env

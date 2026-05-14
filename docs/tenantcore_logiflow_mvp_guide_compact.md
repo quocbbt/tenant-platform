@@ -178,6 +178,13 @@
 1. [x] Stabilize reconciliation APIs:
    - stronger validation by driver/time-window policy has been implemented.
 2. [x] Add request/response examples for create/update endpoints directly via OpenAPI annotations.
+3. [x] Stage 8 - Docker Deployment Infrastructure:
+   - Dockerfiles for all 3 services (multi-stage builds)
+   - Docker Compose orchestration with PostgreSQL
+   - Health checks and service dependencies
+   - Helper scripts for Windows and Linux/Mac
+   - Comprehensive deployment documentation
+   - Environment configuration templates
 
 ## 10) Definition of Done for Stage 7
 - Full project build passes.
@@ -185,3 +192,44 @@
 - Tenant filtering enforced on business queries.
 - No secret leakage in committed runtime config.
 - Guide is updated after every completed milestone.
+
+## 11) Stage 8 Deliverables - Docker Deployment
+- [x] **Dockerfiles** (3 files):
+  - `core-service/Dockerfile` - Multi-stage build with health checks
+  - `logiflow-service/Dockerfile` - Multi-stage build with health checks
+  - `gateway-service/Dockerfile` - Multi-stage build with health checks
+- [x] **Docker Compose Stack** (`docker-compose-new.yml`):
+  - PostgreSQL 16 database service (5432)
+  - Core Service (8081) with Flyway migrations
+  - LogiFlow Service (8082)
+  - Gateway Service (8080) routing to backends
+  - Service health checks
+  - Startup dependencies management
+  - Docker bridge network
+  - Persistent volume for database
+- [x] **Configuration & Setup**:
+  - `.env.example` - Environment variable template
+  - `.dockerignore` - Optimized build context
+  - `gateway-service/application.yaml` - Updated for Docker networking
+- [x] **Helper Scripts** (2 platforms):
+  - `docker-helper.sh` - Linux/Mac bash script
+  - `docker-helper.bat` - Windows batch script
+  - Commands: build, start, stop, restart, logs, ps, health, db-access, clean
+- [x] **Documentation**:
+  - `docs/DOCKER_DEPLOYMENT_GUIDE.md` - Comprehensive 11,200+ word guide
+  - `DOCKER_SETUP_README.md` - Quick reference
+  - `STAGE8_COMPLETION_SUMMARY.md` - Detailed completion summary
+  - `docs/BUSINESS_FEATURES_OUTLINE.md` - Business features reference
+
+## 12) Definition of Done for Stage 8
+- [x] All Dockerfiles created and tested (multi-stage builds)
+- [x] Docker Compose orchestration includes all services + PostgreSQL
+- [x] Services have health checks configured
+- [x] Environment variables properly configured for Docker networking
+- [x] Helper scripts work on Windows and Linux/Mac
+- [x] Documentation covers setup, troubleshooting, and production deployment
+- [x] Services start correctly with `docker-compose up -d`
+- [x] Database migrations run automatically
+- [x] Gateway routes to core-service and logiflow-service correctly
+- [x] Health checks verify all services are running
+- [x] Database data persists in named volume
