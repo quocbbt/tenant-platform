@@ -33,7 +33,7 @@ public class AuthControllerImpl implements AuthApi {
             @RequestBody LoginRequest request
     ) {
         String effectiveTenant = tenantCode == null || tenantCode.isBlank() ? "demo" : tenantCode;
-        LoginResponse response = authFacade.login(effectiveTenant, request.username(), request.password());
+        LoginResponse response = authFacade.login(effectiveTenant, request.identifier(), request.password());
         return ApiResponse.success("Login success", response);
     }
 

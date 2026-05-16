@@ -25,7 +25,7 @@ Manages user authentication, tenant isolation, and permission enforcement.
 
 | Feature | Endpoint | Method | Description |
 |---------|----------|--------|-------------|
-| **Login** | `/api/auth/login` | `POST` | Authenticate user with username/password + tenant code |
+| **Login** | `/api/auth/login` | `POST` | Authenticate user with username/email/phone + password + tenant code |
 | **My Profile** | `/api/auth/me` | `GET` | Get current logged-in user info + their roles/permissions |
 | **Setup Password** | `/api/auth/setup-password` | `POST` | Create/reset user password |
 | **Refresh Token** | `/api/auth/refresh` | `POST` | Get new access token using refresh token |
@@ -40,9 +40,12 @@ Manages user authentication, tenant isolation, and permission enforcement.
 - **Refresh Tokens** - Session management with device tracking
 
 ### Key Business Logic
-1. **Login Flow**: Validate credentials → Check tenant → Resolve user permissions → Return JWT + Refresh Token
-2. **Token Refresh**: Validate refresh token → Issue new access token (without re-authenticating)
-3. **Logout**: Revoke refresh token (prevent reuse)
+1. **Login Flow**: Accept username/email/phone → Validate credentials → Check tenant → Resolve user permissions → Return JWT + Refresh Token
+2. **Flexible Identifier**: Login supports username, email, or phone (case-insensitive for username/email)
+3. **Token Refresh**: Validate refresh token → Issue new access token (without re-authenticating)
+4. **Logout**: Revoke refresh token (prevent reuse)
+5. **Current scope decision**: Keep **1 user = 1 tenant** for this phase. Auth/authorization resolves tenant from `users.tenant_code` + JWT tenant claim.
+6. **Future scale-up note**: `user_tenants` is reserved for multi-tenant membership (one user in multiple tenants) and is not active in current auth flow.
 
 ### Database Tables
 ```
@@ -53,6 +56,7 @@ permissions          -- Global permissions
 user_roles           -- User ↔ Role mapping
 role_permissions     -- Role ↔ Permission mapping
 refresh_tokens       -- Session tokens (with device tracking)
+user_tenants         -- Reserved for future multi-tenant user membership (not used in current phase)
 ```
 
 ---
@@ -99,15 +103,22 @@ COMPLETED (delivered) or CANCELLED
 #### Endpoints
 | Feature | Endpoint | Method | Permission | Description |
 |---------|----------|--------|-----------|-------------|
-| Create Driver | `/api/logiflow/drivers` | `POST` | `LOGIFLOW_DRIVER_CREATE` | Register new driver |
+| Create Driver | `/api/logiflow/drivers` | `POST` | `LOGIFLOW_DRIVER_CREATE` | Register new driver + create user account for login |
 | Get Driver | `/api/logiflow/drivers/{id}` | `GET` | `LOGIFLOW_DRIVER_VIEW` | Get driver profile |
 | List Drivers | `/api/logiflow/drivers` | `GET` | `LOGIFLOW_DRIVER_VIEW` | List drivers (paginated, filter by status/name) |
 | Update Driver | `/api/logiflow/drivers/{id}` | `PUT` | `LOGIFLOW_DRIVER_UPDATE` | Update driver info (phone, license, etc.) |
 | Delete Driver | `/api/logiflow/drivers/{id}` | `DELETE` | `LOGIFLOW_DRIVER_DELETE` | Soft-delete driver (mark inactive) |
 
+#### Driver Authentication
+- **Driver Login**: Use `/api/auth/login` with driver's username/password to get JWT token
+- **Driver Profile Link**: Each driver has `user_id` FK linking to user account for authentication
+- **Driver Web App**: Dedicated web app for drivers to view assigned orders + update tracking status (filtered by current user's driver profile)
+- **Role & Permissions**: Drivers assigned MEMBER role with `LOGIFLOW_ORDER_VIEW`, `LOGIFLOW_ORDER_UPDATE`, `LOGIFLOW_ORDER_TRACKING` permissions
+
 #### Driver Data
 - Driver code, full name, phone, email
 - License number, status (ACTIVE/INACTIVE)
+- Linked user account (user_id) for authentication
 - Assigned vehicles and current orders
 
 ---
@@ -295,7 +306,10 @@ tenants (tenant master)
 ### LogiFlow Service Database
 ```
 logiflow_customers (customer master)
+
 logiflow_drivers (driver master)
+└── users (FK: user_id for driver authentication)
+
 logiflow_vehicles (vehicle master)
 
 logiflow_orders (core business)
@@ -310,6 +324,7 @@ logiflow_orders (core business)
 - **Soft Deletes**: `deleted_at` + `deleted_by` columns (no hard deletes)
 - **Timestamps**: `created_at`, `updated_at` automatically managed
 - **Migrations**: Schema changes via Flyway in `core-service` only
+- **Driver Authentication**: Each driver has `user_id` FK to enable login via shared auth service (/api/auth/login)
 
 ---
 
@@ -356,10 +371,35 @@ logiflow_orders (core business)
    GET /api/logiflow/operations/cod/summary
 ```
 
-### Workflow 3: Driver & Vehicle Management
+### Workflow 3: Driver Authentication & Order Management (Driver Web App)
+```
+1. Driver Login (using shared auth service)
+   POST /api/auth/login
+   body: {username: "demo.driver", password: "...", tenantCode: "demo"}
+   → Returns JWT token with MEMBER role + logiflow permissions
+
+2. Get Driver's Assigned Orders
+   GET /api/logiflow/orders?status=IN_TRANSIT
+   (Filtered by current user's driver profile automatically)
+   
+3. Update Order Tracking (GPS/Location)
+   POST /api/logiflow/orders/{orderId}/tracking
+   body: {latitude, longitude, eventType: "IN_TRANSIT", notes}
+   
+4. Update Order Status (Delivery Progress)
+   PATCH /api/logiflow/orders/{orderId}/status
+   body: {status: "COMPLETED"}
+   
+5. Record COD Payment
+   POST /api/logiflow/orders/{orderId}/cod
+   body: {amount: 1000000, status: "COLLECTED"}
+```
+
+### Workflow 4: Driver & Vehicle Management
 ```
 1. Register New Driver
    POST /api/logiflow/drivers
+   (Automatically creates user account for login)
    
 2. Register New Vehicle
    POST /api/logiflow/vehicles
@@ -401,18 +441,57 @@ logiflow_orders (core business)
 - Environment Variable: `NEON_DB_PASSWORD` (no hardcoded secrets)
 - JWT Signing: Symmetric key (configured in environment)
 
+### Demo Credentials
+| User Type | Identifier (Username/Email/Phone) | Password | Tenant Code | Role | Permissions |
+|-----------|----------------------------------|----------|-------------|------|-------------|
+| Admin | `demo.owner` (username) | `password` | `demo` | OWNER | All permissions |
+| Driver | `demo.driver` (username) or `0909123456` (phone) | `password` | `demo` | MEMBER | `LOGIFLOW_ORDER_*`, `LOGIFLOW_ORDER_TRACKING` |
+
+### Login Examples
+**By Username:**
+```json
+POST /api/auth/login
+{
+  "identifier": "demo.owner",
+  "password": "password",
+  "tenantCode": "demo"
+}
+```
+
+**By Phone:**
+```json
+POST /api/auth/login
+{
+  "identifier": "0909123456",
+  "password": "password",
+  "tenantCode": "demo"
+}
+```
+
+**By Email:**
+```json
+POST /api/auth/login
+{
+  "identifier": "demo.driver@tenantcore.local",
+  "password": "password",
+  "tenantCode": "demo"
+}
+```
+
 ### Testing
 - Use Postman collection: `postman/tenantcore-gateway-mvp.postman_collection.json`
 - Base URL: `http://localhost:8080`
 - Auto-populated variables: `accessToken`, `refreshToken`, `orderId`, `customerId`, etc.
 - E2E script: `tools/e2e_reconciliation_gateway.ps1`
+- Driver Login: POST `/api/auth/login` with `demo.driver` credentials to test driver web app flow
 
 ---
 
-## ✅ Current Status (Stage 7 Complete)
+## ✅ Current Status (Stage 8 Complete)
 
 ### Delivered
 - ✅ Multi-tenant auth (login, refresh, logout, roles, permissions)
+- ✅ Flexible login identifier (username/email/phone)
 - ✅ Order management (CRUD + status flow + assignment + tracking)
 - ✅ Driver/Vehicle/Customer management (CRUD)
 - ✅ COD tracking and reconciliation workflow
@@ -422,6 +501,8 @@ logiflow_orders (core business)
 - ✅ Swagger/OpenAPI documentation
 - ✅ E2E automation tests
 - ✅ Database migrations (Flyway)
+- ✅ Driver authentication (driver login + user account linking)
+- ✅ Notification API (list, detail, unread count, mark read)
 
 ### Ready for Stage 8
 - Performance optimization?
@@ -432,7 +513,13 @@ logiflow_orders (core business)
 
 ---
 
-## 📞 Quick Reference
+## 📚 Detailed Documentation
+
+For comprehensive platform documentation, refer to:
+
+- **[ARCHITECTURE.md](./ARCHITECTURE.md)** - System architecture, user types, entity relationships, authentication flow
+- **[BUSINESS_FEATURES_OUTLINE.md](./BUSINESS_FEATURES_OUTLINE.md)** - API endpoints, features, workflows, tech stack
+- **[tenantcore_logiflow_mvp_guide_compact.md](./tenantcore_logiflow_mvp_guide_compact.md)** - Implementation guide
 
 ### Base URL
 `http://localhost:8080` (through gateway)

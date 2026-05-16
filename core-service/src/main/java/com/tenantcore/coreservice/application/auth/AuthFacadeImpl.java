@@ -16,8 +16,8 @@ public class AuthFacadeImpl implements AuthFacade {
     }
 
     @Override
-    public LoginResponse login(String tenantCode, String username, String password) {
-        return authService.login(tenantCode, username, password);
+    public LoginResponse login(String tenantCode, String identifier, String password) {
+        return authService.login(tenantCode, identifier, password);
     }
 
     @Override

@@ -6,7 +6,7 @@ import com.tenantcore.coreservice.api.auth.dto.TokenPairResponse;
 
 public interface AuthFacade {
 
-    LoginResponse login(String tenantCode, String username, String password);
+    LoginResponse login(String tenantCode, String identifier, String password);
 
     CurrentUserResponse me(String authorizationHeader, String tenantCode);
 

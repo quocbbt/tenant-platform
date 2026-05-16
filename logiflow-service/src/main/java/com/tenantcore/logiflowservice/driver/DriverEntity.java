@@ -48,4 +48,7 @@ public class DriverEntity {
 
     @Column(name = "deleted_at")
     private LocalDateTime deletedAt;
+
+    @Column(name = "user_id")
+    private UUID userId;
 }

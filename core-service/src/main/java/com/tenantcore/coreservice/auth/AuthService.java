@@ -67,9 +67,9 @@ public class AuthService {
         this.authProperties = authProperties;
     }
 
-    public LoginResponse login(String tenantCode, String username, String rawPassword) {
+    public LoginResponse login(String tenantCode, String identifier, String rawPassword) {
         UserEntity user = userRepository
-                .findByTenantCodeAndUsernameAndStatusAndDeletedAtIsNull(tenantCode, username, SecurityConstants.STATUS_ACTIVE)
+                .findByTenantCodeAndIdentifierAndStatusAndDeletedAtIsNull(tenantCode, identifier, SecurityConstants.STATUS_ACTIVE)
                 .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_USERNAME_OR_PASSWORD));
 
         if (!passwordEncoder.matches(rawPassword, user.getPasswordHash())) {
