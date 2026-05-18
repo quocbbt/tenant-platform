@@ -22,6 +22,7 @@
     <module>common-lib</module>
     <module>gateway-service</module>
     <module>core-service</module>
+    <module>laundryhub-service</module>
     <module>logiflow-service</module>
   </modules>
 
@@ -48,5 +49,11 @@
       </dependency>
     </dependencies>
   </dependencyManagement>
+  <dependencies>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot</artifactId>
+    </dependency>
+  </dependencies>
 
 </project>
